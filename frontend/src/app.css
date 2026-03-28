@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+	/* palette – light mode */
+	--color-bg: #f5f6f8;
+	--color-surface: #ffffff;
+	--color-surface-elevated: #ffffff;
+	--color-border: #e2e4e9;
+	--color-border-hover: #c8cbd2;
+	--color-text: #1a1d24;
+	--color-text-muted: #7c8091;
+
+	/* node accent colors */
+	--color-condition: #8b5cf6;
+	--color-entry: #3b82f6;
+	--color-exit: #64748b;
+	--color-true: #22c55e;
+	--color-false: #ef4444;
+
+	--color-condition-transparent: color-mix(in srgb, var(--color-condition) 20%, transparent);
+
+	/* node hover colors */
+	--color-condition-hover: #5419df;
+	--color-entry-hover: #0c60e6;
+	--color-exit-hover: #42546d;
+}
+
+/* ── Reset & base ───────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html,
+body {
+	height: 100%;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
+	font-size: 14px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ──────────────────────────────────────── */
+
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: rgba(0, 0, 0, 0.12);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: rgba(0, 0, 0, 0.22);
+}
+
+/* ── Shared form controls ───────────────────────────── */
+
+select,
+input,
+button {
+	font-family: inherit;
+	font-size: inherit;
+}
+
+/* ── xyflow theme ───────────────────────────────────── */
+
+.svelte-flow {
+	--xy-background-color: var(--color-bg);
+	--xy-background-pattern-color: #d0d3da;
+
+	--xy-node-background-color: rgba(255, 255, 255, 0.6);
+	--xy-node-border: 1px solid var(--color-border);
+	--xy-node-border-radius: 10px;
+	--xy-node-color: var(--color-text);
+	--xy-node-boxshadow-hover: 2px 2px 5px 2px rgba(0, 0, 0, 0.11);
+	--xy-node-boxshadow-selected: 2px 2px 2px 2px rgba(0, 0, 0, 0.11);
+	--xy-node-font-size: 12px;
+
+	--xy-handle-background-color: rgba(255, 255, 255, 0.42);
+	--xy-handle-border-color: #aaaaaa;
+
+	--xy-edge-stroke: #b4b8c4;
+	--xy-edge-stroke-width: 1.5;
+	--xy-edge-stroke-selected: #64748b;
+
+	--xy-connectionline-stroke: #94a3b8;
+	--xy-connectionline-stroke-width: 1.5;
+
+	--xy-controls-button-background-color: var(--color-surface);
+	--xy-controls-button-background-color-hover: var(--color-bg);
+	--xy-controls-button-color: var(--color-text-muted);
+	--xy-controls-button-color-hover: var(--color-text);
+	--xy-controls-button-border-color: var(--color-border);
+	--xy-controls-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+
+	--xy-edge-label-background-color: var(--color-surface);
+	--xy-edge-label-color: var(--color-text-muted);
+
+	--xy-selection-background-color: rgba(59, 130, 246, 0.06);
+	--xy-selection-border: 1px dashed rgba(59, 130, 246, 0.4);
+
+	--xy-resize-background-color: var(--color-entry);
+
+	--xy-attribution-background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Node glassmorphism & interaction states ─────────── */
+
+.svelte-flow__node {
+	backdrop-filter: blur(3px);
+	-webkit-backdrop-filter: blur(3px);
+	border: 1px solid black;
+	border-radius: 10px;
+	font-size: var(--xy-node-font-size);
+}
+
+/* .svelte-flow__node.selectable:focus {
+	box-shadow: 0 0 0 3px var(--color-border-hover);
+}
+
+.svelte-flow__node.selectable:focus:active {
+	box-shadow: var(--xy-node-boxshadow-hover);
+}
+
+.svelte-flow__node.selectable:hover,
+.svelte-flow__node.draggable:hover {
+	border-color: var(--color-border-hover);
+} */
+
+.svelte-flow__edge.selectable:hover .svelte-flow__edge-path,
+.svelte-flow__edge.selectable.selected .svelte-flow__edge-path {
+	stroke: var(--xy-edge-stroke-selected);
+}
+
+/* ================================================================== */
+/* XYFLOW HANDLES */
+/* ================================================================== */
+
+/* add .svelte-flow to get higher specificity over the style defined by xyflow */
+.svelte-flow .svelte-flow__handle {
+	height: 8px;
+	min-height: 8px;
+	width: 8px;
+	min-width: 8px;
+}
+/* Input handle */
+.svelte-flow .svelte-flow__handle-top {
+	background: gray;
+}
+/* TRUE handle */
+.svelte-flow .svelte-flow__handle-right {
+	background: var(--color-true);
+}
+/* FALSE handle */
+.svelte-flow .svelte-flow__handle-left {
+	background: var(--color-false);
+}
+.svelte-flow__handle.connectionindicator:hover {
+	pointer-events: all;
+	border-color: var(--color-text-muted);
+	background-color: white;
+}
+
+.svelte-flow__handle.connectionindicator:focus,
+.svelte-flow__handle.connectingfrom,
+.svelte-flow__handle.connectingto {
+	border-color: var(--color-text-muted);
+}

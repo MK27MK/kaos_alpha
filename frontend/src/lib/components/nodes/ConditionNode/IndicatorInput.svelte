@@ -1,0 +1,93 @@
+<script lang="ts">
+	import {
+		createIndicator,
+		INDICATOR_DISPLAY_NAMES,
+		INDICATOR_PARAMETERS,
+		type IndicatorName
+	} from '$lib/models/indicator';
+	import type { ConditionNodeData } from '$lib/types/nodes';
+	import type { Node, NodeProps } from '@xyflow/svelte';
+	import { useSvelteFlow } from '@xyflow/svelte';
+
+	type ConditionNode = Node<ConditionNodeData, 'condition'>;
+
+	let { id, data, side }: NodeProps<ConditionNode> & { side: 'leftIndicator' | 'rightIndicator' } =
+		$props();
+
+	const { updateNodeData } = useSvelteFlow();
+
+	function handleIndicatorChange(name: IndicatorName) {
+		updateNodeData(id, { [side]: createIndicator(name) });
+	}
+
+	function handleChangeIndicatorParams(paramKey: string, value: number | string) {
+		const current = data[side];
+		updateNodeData(id, {
+			[side]: { ...current, parameters: { ...current.parameters, [paramKey]: value } }
+		});
+	}
+</script>
+
+<div class="value-input">
+	<select
+		class="nodrag"
+		value={data[side].name}
+		onchange={(e) => handleIndicatorChange(e.currentTarget.value as IndicatorName)}
+	>
+		{#each INDICATOR_DISPLAY_NAMES as indi (indi.value)}
+			<option value={indi.value}>{indi.displayName}</option>
+		{/each}
+	</select>
+	{#each INDICATOR_PARAMETERS[data[side].name] as param (param.name)}
+		<!-- render a SELECT tag for parameters like 'band' of bollinger band, which can be either 'upper' or 'lower' -->
+		{#if param.htmlTag === 'select' && param.options}
+			<select
+				class="nodrag"
+				value={data[side].parameters[param.name]}
+				onchange={(e) => handleChangeIndicatorParams(param.name, e.currentTarget.value)}
+			>
+				{#each param.options as opt (opt.name)}
+					<option value={opt.name}>{opt.displayName}</option>
+				{/each}
+			</select>
+			<!-- render an INPUT tag for numerical parameters like length -->
+		{:else if param.htmlTag === 'input'}
+			<input
+				type="number"
+				class="nodrag param-input"
+				value={data[side].parameters[param.name]}
+				min={param.min}
+				max={param.max}
+				onchange={(e) => handleChangeIndicatorParams(param.name, Number(e.currentTarget.value))}
+			/>
+		{/if}
+	{/each}
+</div>
+
+<style>
+	.value-input {
+		display: flex;
+		gap: 2px;
+		align-items: center;
+	}
+	select,
+	input {
+		/* appearance provato ma non funziona */
+		/* appearance: none; */
+		background: var(--color-condition-transparent);
+		border: 1px solid #e2e4e9;
+		border-radius: 10px;
+		padding: 2px 4px;
+		color: #1a1d24;
+		font-size: 11px;
+	}
+
+	select:hover {
+		border-color: #c8cbd2;
+	}
+
+	.param-input {
+		width: 40px;
+		text-align: center;
+	}
+</style>
