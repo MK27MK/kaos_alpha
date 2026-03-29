@@ -99,7 +99,6 @@ export const INDICATOR_PARAMETERS: Record<IndicatorName, IndicatorParameter[]> =
 };
 // ── Helpers ─────────────────────────────────────────────────────────
 
-
 export function createIndicator(indicatorName: IndicatorName): Indicator {
 	const parameters: Record<string, number | string> = {};
 	for (const p of INDICATOR_PARAMETERS[indicatorName]) parameters[p.name] = p.default;

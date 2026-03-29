@@ -32,14 +32,28 @@ export function useContextMenu() {
 	return {
 		// Getter/setter exposes the reactive $state across the module boundary.
 		// Destructuring would snapshot the value and lose reactivity.
-		get id() { return id; },
-		get top() { return top; },
-		get left() { return left; },
-		get right() { return right; },
-		get bottom() { return bottom; },
-		get flowDiv() { return flowDiv; },
+		get id() {
+			return id;
+		},
+		get top() {
+			return top;
+		},
+		get left() {
+			return left;
+		},
+		get right() {
+			return right;
+		},
+		get bottom() {
+			return bottom;
+		},
+		get flowDiv() {
+			return flowDiv;
+		},
 		// setter allows bind:this to write back
-		set flowDiv(el: HTMLDivElement | null) { flowDiv = el; },
+		set flowDiv(el: HTMLDivElement | null) {
+			flowDiv = el;
+		},
 		handleContextMenu,
 		handlePaneClick
 	};

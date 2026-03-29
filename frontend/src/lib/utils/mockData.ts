@@ -33,7 +33,7 @@ export function generateMockCandles(
 			open: Number(open.toFixed(2)),
 			high: Number(high.toFixed(2)),
 			low: Number(low.toFixed(2)),
-			close: Number(close.toFixed(2)),
+			close: Number(close.toFixed(2))
 		});
 
 		currentTime += 60; // 1 minute intervals

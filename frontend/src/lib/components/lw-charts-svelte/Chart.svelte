@@ -3,7 +3,7 @@
 		createChart,
 		type ChartOptions,
 		type DeepPartial,
-		type IChartApi,
+		type IChartApi
 	} from 'lightweight-charts';
 	import { onMount, type Snippet } from 'svelte';
 	import { setChartContext } from './context.js';
@@ -17,11 +17,16 @@
 		children?: Snippet;
 	}
 
-	let { chart = $bindable(null), container = $bindable(null), options = {}, children }: Props = $props();
+	let {
+		chart = $bindable(null),
+		container = $bindable(null),
+		options = {},
+		children
+	}: Props = $props();
 
 	// You wrap it inside a closure to preserve reactivity
 	setChartContext(() => chart);
-	
+
 	onMount(() => {
 		console.log('Chart.onMount: chart is about to be added');
 		if (!container) return;

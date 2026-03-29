@@ -1,0 +1,40 @@
+repos:
+# ── Backend (Python) ──
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.12.5
+  hooks:
+    # Run the linter.
+    - id: ruff-check
+      args: [ --fix ]
+      files: ^backend/
+      # types_or: [ python, pyi ] # exclude jupyter notebooks
+    # Run the formatter.
+    - id: ruff-format
+      types_or: [ python, pyi ] # exclude jupyter notebooks
+      files: ^backend/
+
+- repo: https://github.com/kynan/nbstripout
+  rev: 0.8.1
+  hooks:
+    - id: nbstripout
+      files: ^backend/.*\.ipynb$
+
+# ── Frontend (JS/TS/Svelte) ──
+# Hooks cd into frontend/ so tools resolve configs and node_modules correctly
+- repo: local
+  hooks:
+    - id: prettier
+      name: prettier (frontend)
+      entry: bash -c 'cd frontend && node_modules/.bin/prettier --check --ignore-unknown "${@#frontend/}"' --
+      files: ^frontend/
+      language: system
+    - id: eslint
+      name: eslint (frontend)
+      entry: bash -c 'cd frontend && node_modules/.bin/eslint "${@#frontend/}"' --
+      files: ^frontend/.*\.(js|ts|svelte)$
+      language: system
+
+# - repo: https://github.com/pre-commit/mirrors-mypy
+#   rev: v1.17.0
+#   hooks:
+#     - id: mypy

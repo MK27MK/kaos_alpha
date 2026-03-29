@@ -80,11 +80,11 @@
 		if (!timeScale || !onVisibleLogicalRangeChange) return;
 
 		timeScale.subscribeVisibleLogicalRangeChange(onVisibleLogicalRangeChange);
-		console.log("TimeScale.effect: subscribed to VisibleLogicalRangeChange.")
-		
+		console.log('TimeScale.effect: subscribed to VisibleLogicalRangeChange.');
+
 		return () => {
 			timeScale?.unsubscribeVisibleLogicalRangeChange(onVisibleLogicalRangeChange);
-			console.log("TimeScale.effect: unsubscribed to VisibleLogicalRangeChange.")
+			console.log('TimeScale.effect: unsubscribed to VisibleLogicalRangeChange.');
 		};
 	});
 

@@ -13,7 +13,6 @@
 	import { chartOptions, lineSeriesOptions } from '$lib/utils/chartConfig';
 	import { Background, Controls, Panel, SvelteFlow } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import type { LineData } from 'lightweight-charts';
 	import { onMount } from 'svelte';
 
 	const instrument = new SyntheticInstrument();
@@ -46,11 +45,7 @@
 				<LineSeries data={instrument.prices} options={lineSeriesOptions}></LineSeries>
 				{#each strategyFlow.indicatorsToPlot as indi (indi.key)}
 					{#each Object.values(instrument.indicators[indi.key]?.history ?? {}) as lineData}
-						<LineSeries
-							data={lineData}
-							color="#facc15"
-							lineWidth={2}
-						/>
+						<LineSeries data={lineData} color="#facc15" lineWidth={2} />
 					{/each}
 				{/each}
 			</Chart>
