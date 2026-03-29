@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 # TODO do camelcase model
 
+
 class Indicator(BaseModel, ABC):
     # Allow pd.DataFrame as a field type — Pydantic doesn't know
     # how to build a JSON schema for it, so we need this escape hatch.
@@ -116,22 +117,28 @@ class BollingerBands(Indicator):
         # do not have a corresponding indicator value
         if len(prices_array) < length:
             nan_count = len(prices_array)
-            self.history = pd.DataFrame({
-                "upper": [np.nan] * nan_count,
-                "middle": [np.nan] * nan_count,
-                "lower": [np.nan] * nan_count,
-            })
+            self.history = pd.DataFrame(
+                {
+                    "upper": [np.nan] * nan_count,
+                    "middle": [np.nan] * nan_count,
+                    "lower": [np.nan] * nan_count,
+                }
+            )
             self._buffer = deque(prices, maxlen=length)
             return
 
-        upper_band, middle_band, lower_band = self.compute_bands(prices_array, length, std_dev)
+        upper_band, middle_band, lower_band = self.compute_bands(
+            prices_array, length, std_dev
+        )
 
         nan_prefix = [np.nan] * (length - 1)
-        self.history = pd.DataFrame({
-            "upper": nan_prefix + upper_band.tolist(),
-            "middle": nan_prefix + middle_band.tolist(),
-            "lower": nan_prefix + lower_band.tolist(),
-        })
+        self.history = pd.DataFrame(
+            {
+                "upper": nan_prefix + upper_band.tolist(),
+                "middle": nan_prefix + middle_band.tolist(),
+                "lower": nan_prefix + lower_band.tolist(),
+            }
+        )
 
         self._buffer = deque(prices[-length:], maxlen=length)
 
@@ -141,21 +148,25 @@ class BollingerBands(Indicator):
         std_dev = self.parameters["std_dev"]
 
         if len(self._buffer) < length:
-            new_row = pd.DataFrame({
-                "upper": [np.nan],
-                "middle": [np.nan],
-                "lower": [np.nan],
-            })
+            new_row = pd.DataFrame(
+                {
+                    "upper": [np.nan],
+                    "middle": [np.nan],
+                    "lower": [np.nan],
+                }
+            )
         else:
             window = list(self._buffer)
             middle = sum(window) / length
             variance = sum((p - middle) ** 2 for p in window) / length
             std = variance**0.5
-            new_row = pd.DataFrame({
-                "upper": [middle + std_dev * std],
-                "middle": [middle],
-                "lower": [middle - std_dev * std],
-            })
+            new_row = pd.DataFrame(
+                {
+                    "upper": [middle + std_dev * std],
+                    "middle": [middle],
+                    "lower": [middle - std_dev * std],
+                }
+            )
 
         self.history = pd.concat([self.history, new_row], ignore_index=True)
 

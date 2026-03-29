@@ -1,7 +1,5 @@
-
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-
 
 
 class CamelCaseModel(BaseModel):
@@ -13,10 +11,11 @@ class CamelCaseModel(BaseModel):
         validate_by_alias=True,
     )
 
+
 class AddIndicatorResponse(CamelCaseModel):
     indicator_key: str
 
-    
+
 # class MarketFeatureModel(CamelCaseModel):
 #     type: str
 #     parameters: dict[str, int | str]

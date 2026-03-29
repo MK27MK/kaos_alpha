@@ -97,9 +97,7 @@ class NoisySin(SyntheticInstrument):
 
     def _calculate_prices(self, n: int) -> np.ndarray:
         indices = np.arange(n)
-        sin_component = self._amplitude * np.sin(
-            2 * np.pi * indices / self._period
-        )
+        sin_component = self._amplitude * np.sin(2 * np.pi * indices / self._period)
         noise = np.random.normal(0, self._noise_std, size=n)
         return self._initial_price + sin_component + noise
 
