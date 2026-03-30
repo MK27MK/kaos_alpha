@@ -5,9 +5,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.model import AddIndicatorRequest, AddIndicatorResponse
+from app.data_model.model import AddIndicatorRequest, AddIndicatorResponse
 from backtest import Backtester
 from indicator import SMA, BollingerBands, Hour, Price
+from app.data_model.indicator_schema import INDICATOR_SCHEMAS, IndicatorSchema
 from instrument import NoisySin
 
 app = FastAPI()
@@ -27,6 +28,14 @@ sim_time_start: int = 0
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# REST endpoints for indicator schemas ==================================
+
+
+@app.get("/api/indicator-schemas", response_model=list[IndicatorSchema])
+def get_indicator_schemas():
+    return list(INDICATOR_SCHEMAS.values())
 
 
 # REST endpoints for indicator management ==============================
@@ -136,7 +145,7 @@ async def price_stream(ws: WebSocket):
                             "type": "indicator",
                             "key": indicator.key,
                             "time": sim_time,
-                            "value": {k: round(v, 4) for k, v in val.items()},
+                            "value": val,
                         }
                     )
                 else:

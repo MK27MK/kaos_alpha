@@ -10,43 +10,36 @@ from collections import deque
 
 import numpy as np
 from indicator import BollingerBands
+from app.data_model.indicator_schema import make_indicator_key
 
 # ── Feature computation ──────────────────────────────────────────────
 
 
 def _feature_key(market_feature: dict) -> str:
-    """Deterministic cache key for a serialized feature."""
-    feat_type = market_feature["type"]
-    feature_data = market_feature.get("parameters", {})
-    match feat_type:
-        case "price":
-            return f"price:{feature_data.get('barsAgo', 0)}"
-        case "sma":
-            return f"sma:{feature_data['length']}"
-        case "bollinger_bands":
-            return f"bollinger_bands:{feature_data.get('band', 'upper')}:{feature_data['length']}:{feature_data.get('stDev', 2)}"
-
-    return feat_type  # "hour"
+    """Deterministic cache key using the centralized key algorithm."""
+    return make_indicator_key(
+        market_feature["name"], market_feature.get("parameters", {})
+    )
 
 
 def _compute_feature(
     feature: dict, prices: np.ndarray, times: np.ndarray
 ) -> np.ndarray:
     """Return a float64 array of length N for the given feature."""
-    feature_type = feature["type"]
+    feature_name = feature["name"]
     parameters = feature.get("parameters", {})
     n_bars = len(prices)
 
-    if feature_type == "price":
-        bars_ago = parameters.get("barsAgo", 0)
-        if bars_ago == 0:
+    if feature_name == "price":
+        shift = parameters.get("shift", 0)
+        if shift == 0:
             return prices.copy()
         result = np.full(n_bars, np.nan)
-        if bars_ago < n_bars:
-            result[bars_ago:] = prices[: n_bars - bars_ago]
+        if shift < n_bars:
+            result[shift:] = prices[: n_bars - shift]
         return result
 
-    if feature_type == "sma":
+    if feature_name == "sma":
         length = parameters["length"]
         if n_bars < length:
             return np.full(n_bars, np.nan)
@@ -56,9 +49,9 @@ def _compute_feature(
         result[length - 1 :] = sma
         return result
 
-    if feature_type == "bollinger_bands":
+    if feature_name == "bollinger_bands":
         length = parameters["length"]
-        std_dev = parameters.get("stDev", 2)
+        std_dev = parameters.get("std_dev", 2)
         band = parameters.get("band", "upper")
         if n_bars < length:
             return np.full(n_bars, np.nan)
@@ -67,10 +60,10 @@ def _compute_feature(
         result[length - 1 :] = upper if band == "upper" else lower
         return result
 
-    if feature_type == "hour":
+    if feature_name == "hour":
         return ((times % 86400) // 3600).astype(np.float64)
 
-    raise ValueError(f"Unknown feature type: {feature_type}")
+    raise ValueError(f"Unknown feature: {feature_name}")
 
 
 # ── Condition evaluation ─────────────────────────────────────────────

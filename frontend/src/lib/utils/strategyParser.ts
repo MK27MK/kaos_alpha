@@ -1,7 +1,20 @@
+import type { ComparisonOperator } from '$lib/models/indicator';
 import type { ConditionNodeData, EntryNodeData, ExitNodeData } from '$lib/types/nodes';
 import type { Edge, Node } from '@xyflow/svelte';
 
 // ── Serialization types (what the backend receives) ──────────────────
+
+export interface SerializedFeature {
+	name: string;
+	parameters: Record<string, number | string>;
+}
+
+export interface SerializedCondition {
+	label: string;
+	left: SerializedFeature;
+	operator: ComparisonOperator;
+	right: SerializedFeature;
+}
 
 export interface SerializedAction {
 	type: 'entry' | 'exit';
@@ -9,7 +22,7 @@ export interface SerializedAction {
 }
 
 export interface StrategyPayload {
-	conditions: Record<string, ConditionNodeData>;
+	conditions: Record<string, SerializedCondition>;
 	roots: string[];
 	edges: Record<string, { true: string[]; false: string[] }>;
 	actions: Record<string, SerializedAction>;
@@ -125,7 +138,7 @@ export function parseStrategy(nodes: Node[], edges: Edge[]): ParseResult {
 	}
 
 	// Build pruned payload — only nodes/edges in `participates`
-	const conditions: Record<string, ConditionNodeData> = {};
+	const conditions: Record<string, SerializedCondition> = {};
 	const actions: Record<string, SerializedAction> = {};
 	const prunedEdges: Record<string, { true: string[]; false: string[] }> = {};
 
@@ -136,9 +149,12 @@ export function parseStrategy(nodes: Node[], edges: Edge[]): ParseResult {
 			const nodeData = node.data as ConditionNodeData;
 			conditions[nodeId] = {
 				label: nodeData.label,
-				leftIndicator: nodeData.leftIndicator,
+				left: { name: nodeData.leftIndicator.name, parameters: nodeData.leftIndicator.parameters },
 				operator: nodeData.operator,
-				rightIndicator: nodeData.rightIndicator
+				right: {
+					name: nodeData.rightIndicator.name,
+					parameters: nodeData.rightIndicator.parameters
+				}
 			};
 
 			// Pruned edges: only targets that participate

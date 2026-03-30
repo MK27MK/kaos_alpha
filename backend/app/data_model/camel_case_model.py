@@ -10,17 +10,3 @@ class CamelCaseModel(BaseModel):
         validate_by_name=True,
         validate_by_alias=True,
     )
-
-
-class AddIndicatorRequest(CamelCaseModel):
-    name: str
-    parameters: dict[str, int | float]
-
-
-class AddIndicatorResponse(CamelCaseModel):
-    indicator_key: str
-
-
-# class MarketFeatureModel(CamelCaseModel):
-#     type: str
-#     parameters: dict[str, int | str]

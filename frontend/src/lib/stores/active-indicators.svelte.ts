@@ -11,7 +11,7 @@ function isConditionNode(
 /**
  * Derive a deduplicated list of indicators that need plotting.
  * Indicators with the same key (e.g. bb upper vs lower with same
- * length/stDev) collapse into a single entry.
+ * length/std_dev) collapse into a single entry.
  */
 export function getUniqueIndicatorsToPlot(nodes: Node[]): Indicator[] {
 	const allIndicators = nodes

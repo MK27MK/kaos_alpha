@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 
 import numpy as np
+from app.data_model.indicator_schema import IndicatorParameters, make_indicator_key
 from pydantic import BaseModel, PrivateAttr
 
 # TODO do camelcase model
@@ -9,14 +10,13 @@ from pydantic import BaseModel, PrivateAttr
 
 class Indicator(BaseModel, ABC):
     name: str
-    parameters: dict[str, int | float]
+    parameters: IndicatorParameters
     history: dict[str, list[float]] = {}
     _buffer: deque = PrivateAttr(default_factory=deque)
 
     @property
     def key(self) -> str:
-        parameters_values = ":".join(str(v) for v in self.parameters.values())
-        return f"{self.name}:{parameters_values}"
+        return make_indicator_key(self.name, self.parameters)
 
     @abstractmethod
     def calculate_history(self, prices: list[float]) -> None:
@@ -39,7 +39,7 @@ class Indicator(BaseModel, ABC):
 
 
 class SMA(Indicator):
-    def __init__(self, arguments: dict[str, int]):
+    def __init__(self, arguments: IndicatorParameters):
         super().__init__(name="sma", parameters=arguments)
         self._buffer = deque(maxlen=arguments["length"])
 
@@ -74,7 +74,7 @@ class SMA(Indicator):
 
 
 class BollingerBands(Indicator):
-    def __init__(self, arguments: dict[str, int]):
+    def __init__(self, arguments: IndicatorParameters):
         super().__init__(name="bollinger_bands", parameters=arguments)
         self._buffer = deque(maxlen=arguments["length"])
 

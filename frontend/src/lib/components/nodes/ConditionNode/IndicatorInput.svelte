@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		createIndicator,
-		INDICATOR_DISPLAY_NAMES,
-		INDICATOR_PARAMETERS,
-		type IndicatorName
-	} from '$lib/models/indicator';
+	import { createIndicator, getIndicatorSchemas, getIndicatorSchema } from '$lib/models/indicator';
 	import type { ConditionNodeData } from '$lib/types/nodes';
 	import type { Node, NodeProps } from '@xyflow/svelte';
 	import { useSvelteFlow } from '@xyflow/svelte';
@@ -16,7 +11,7 @@
 
 	const { updateNodeData } = useSvelteFlow();
 
-	function handleIndicatorChange(name: IndicatorName) {
+	function handleIndicatorChange(name: string) {
 		updateNodeData(id, { [side]: createIndicator(name) });
 	}
 
@@ -32,13 +27,13 @@
 	<select
 		class="nodrag"
 		value={data[side].name}
-		onchange={(e) => handleIndicatorChange(e.currentTarget.value as IndicatorName)}
+		onchange={(e) => handleIndicatorChange(e.currentTarget.value)}
 	>
-		{#each INDICATOR_DISPLAY_NAMES as indi (indi.value)}
-			<option value={indi.value}>{indi.displayName}</option>
+		{#each getIndicatorSchemas() as schema (schema.name)}
+			<option value={schema.name}>{schema.displayName}</option>
 		{/each}
 	</select>
-	{#each INDICATOR_PARAMETERS[data[side].name] as param (param.name)}
+	{#each getIndicatorSchema(data[side].name).parameters as param (param.name)}
 		<!-- render a SELECT tag for parameters like 'band' of bollinger band, which can be either 'upper' or 'lower' -->
 		{#if param.htmlTag === 'select' && param.options}
 			<select

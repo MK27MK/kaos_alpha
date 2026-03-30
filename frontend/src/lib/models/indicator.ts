@@ -1,4 +1,5 @@
 import type { LineData } from 'lightweight-charts';
+import { API_BASE_URL } from '$lib/utils/env';
 
 /**
  * @example { bblow: [], bbhigh: []}
@@ -7,16 +8,14 @@ export type IndicatorValues = Record<string, LineData[]>;
 // TODO merge these two types
 export type IndicatorValue = Record<string, LineData>;
 
-export type IndicatorName = 'price' | 'sma' | 'bollinger_bands' | 'hour';
-
 export interface Indicator {
-	name: IndicatorName;
+	name: string;
 	parameters: Record<string, number | string>;
 	history?: IndicatorValues;
 	readonly key: string;
 }
 
-// ── Parameter schema ────────────────────────────────────────────────
+// -- Parameter schema -----------------------------------------------------
 // Drives the ConditionNode UI generically: selects and number inputs
 // are rendered automatically from this schema.
 
@@ -35,91 +34,92 @@ export interface IndicatorParameter {
 	 */
 	options?: { name: string; displayName: string }[];
 }
+
 export type ComparisonOperator = '<' | '>' | '=' | '<=' | '>=' | '!=';
 
-export const INDICATOR_DISPLAY_NAMES: { value: IndicatorName; displayName: string }[] = [
-	{ value: 'price', displayName: 'Price' },
-	{ value: 'sma', displayName: 'SMA' },
-	{ value: 'bollinger_bands', displayName: 'Bollinger Bands' },
-	{ value: 'hour', displayName: 'Hour' }
-];
+export interface IndicatorSchema {
+	name: string;
+	displayName: string;
+	parameters: IndicatorParameter[];
+}
 
-export const INDICATOR_PARAMETERS: Record<IndicatorName, IndicatorParameter[]> = {
-	price: [
-		{
-			name: 'shift',
-			displayName: 'shift',
-			htmlTag: 'input',
-			plotParam: false,
-			min: 0,
-			max: 100,
-			default: 0
-		}
-	],
-	hour: [
-		{
-			name: 'shift',
-			displayName: 'shift',
-			htmlTag: 'input',
-			plotParam: false,
-			min: 0,
-			max: 100,
-			default: 0
-		}
-	],
-	sma: [
-		{
-			name: 'length',
-			displayName: 'Length',
-			htmlTag: 'input',
-			plotParam: true,
-			min: 1,
-			max: 200,
-			default: 20
-		}
-	],
-	bollinger_bands: [
-		{
-			name: 'band',
-			displayName: 'Band',
-			htmlTag: 'select',
-			plotParam: false,
-			default: 'upper',
-			options: [{ name: 'upper', displayName: 'lower' }]
-		},
-		{
-			name: 'length',
-			displayName: 'Length',
-			htmlTag: 'input',
-			plotParam: true,
-			min: 1,
-			max: 200,
-			default: 20
-		},
-		{
-			name: 'stDev',
-			displayName: 'StDev',
-			htmlTag: 'input',
-			plotParam: true,
-			min: 1,
-			max: 5,
-			default: 2
-		}
-	]
-};
-// ── Helpers ─────────────────────────────────────────────────────────
+// -- Module-level state for fetched schemas --------------------------------
+// Schemas are loaded once from the backend and cached for the session lifetime.
 
-export function createIndicator(indicatorName: IndicatorName): Indicator {
+let indicatorSchemasByName: Map<string, IndicatorSchema> | null = null;
+let indicatorSchemasList: IndicatorSchema[] | null = null;
+
+/**
+ * Fetches indicator schemas from the backend and caches them at module level.
+ * Must be called once before any other schema accessor is used (e.g. in a
+ * top-level layout load or app initialization).
+ */
+export async function loadIndicatorSchemas(): Promise<void> {
+	const response = await fetch(`${API_BASE_URL}/api/indicator-schemas`);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch indicator schemas: ${response.status} ${response.statusText}`);
+	}
+
+	const schemas: IndicatorSchema[] = await response.json();
+
+	indicatorSchemasByName = new Map(schemas.map((schema) => [schema.name, schema]));
+	indicatorSchemasList = schemas;
+}
+
+/**
+ * Returns all indicator schemas fetched from the backend.
+ * @throws if `loadIndicatorSchemas()` has not been called yet.
+ */
+export function getIndicatorSchemas(): IndicatorSchema[] {
+	if (indicatorSchemasList === null) {
+		throw new Error(
+			'Indicator schemas have not been loaded yet. Call loadIndicatorSchemas() first.'
+		);
+	}
+	return indicatorSchemasList;
+}
+
+/**
+ * Returns the schema for a specific indicator by name.
+ * @throws if schemas have not been loaded or the name is unknown.
+ */
+export function getIndicatorSchema(name: string): IndicatorSchema {
+	if (indicatorSchemasByName === null) {
+		throw new Error(
+			'Indicator schemas have not been loaded yet. Call loadIndicatorSchemas() first.'
+		);
+	}
+
+	const schema = indicatorSchemasByName.get(name);
+	if (!schema) {
+		const availableNames = Array.from(indicatorSchemasByName.keys()).join(', ');
+		throw new Error(`Unknown indicator: "${name}". Available: ${availableNames}`);
+	}
+	return schema;
+}
+
+// -- Helpers ---------------------------------------------------------------
+
+/**
+ * Creates an Indicator instance with default parameter values from the fetched
+ * schema. The `key` getter mirrors the backend algorithm: filter parameters
+ * where `plotParam === true`, join their values with `:`, prepend the indicator name.
+ */
+export function createIndicator(indicatorName: string): Indicator {
+	const schema = getIndicatorSchema(indicatorName);
+
 	const parameters: Record<string, number | string> = {};
-	for (const p of INDICATOR_PARAMETERS[indicatorName]) parameters[p.name] = p.default;
+	for (const param of schema.parameters) {
+		parameters[param.name] = param.default;
+	}
 
 	return {
 		name: indicatorName,
 		parameters,
 		get key(): string {
-			const plotParams = INDICATOR_PARAMETERS[indicatorName].filter((p) => p.plotParam);
-			const values = plotParams.map((p) => parameters[p.name]).join(':');
-			return `${indicatorName}:${values}`;
+			const plotParamDefinitions = schema.parameters.filter((p) => p.plotParam);
+			const plotValues = plotParamDefinitions.map((p) => parameters[p.name]).join(':');
+			return `${indicatorName}:${plotValues}`;
 		}
 	};
 }

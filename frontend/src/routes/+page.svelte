@@ -7,6 +7,7 @@
 	import { useContextMenu } from '$lib/components/nodes/useContextMenu.svelte';
 	import ReplayControls from '$lib/components/ReplayControls.svelte';
 	import { BacktestResult, type BacktestResponse } from '$lib/models/backtest-result.svelte';
+	import { loadIndicatorSchemas } from '$lib/models/indicator';
 	import { SyntheticInstrument } from '$lib/models/market-data.svelte';
 	import { createPriceStream } from '$lib/stores/price-stream.svelte';
 	import { useStrategyFlow } from '$lib/stores/strategy-flow.svelte';
@@ -18,7 +19,8 @@
 	const instrument = new SyntheticInstrument();
 	const stream = createPriceStream(instrument);
 	onMount(() => {
-		stream.connect();
+		// Schemas must be loaded before the UI renders indicator controls
+		loadIndicatorSchemas().then(() => stream.connect());
 		return () => stream.disconnect();
 	});
 

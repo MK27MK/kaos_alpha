@@ -16,12 +16,12 @@ export function useStrategyFlow(instrument: SyntheticInstrument) {
 	let prevIndicators: Indicator[] = $state.raw([]);
 
 	// Strategy validation - re-parsed on every node/edge change
-	let lastParseResult = $state.raw(parseStrategy([], []));
+	let lastParseResult = $derived(parseStrategy(nodes, edges));
 	let backtestLoading = $state(false);
 
-	function revalidate() {
-		lastParseResult = parseStrategy(nodes, edges);
-	}
+	// function revalidate() {
+	// 	lastParseResult = parseStrategy(nodes, edges);
+	// }
 
 	function syncIndicatorsFromNodes(currentNodes: Node[]) {
 		const next = getUniqueIndicatorsToPlot(currentNodes);
@@ -63,7 +63,7 @@ export function useStrategyFlow(instrument: SyntheticInstrument) {
 			const IndicatorKeyRes = await fetch(`${API_BASE_URL}/api/indicators`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(indicator)
+				body: JSON.stringify({ name: indicator.name, parameters: indicator.parameters })
 			});
 			if (!IndicatorKeyRes.ok) return;
 			const { indicatorKey } = await IndicatorKeyRes.json();
@@ -118,15 +118,18 @@ export function useStrategyFlow(instrument: SyntheticInstrument) {
 			nodes = newValue;
 			// Sync indicators on xyflow-driven mutations (delete, data edits).
 			// No-ops for position-only changes like dragging.
+			// console.log("setter triggered")
+			// TODO this gets triggered too many times (i.e. even if you drag a node around)
+			// we want to sync indis on add, remove and condition node parameter change.
 			syncIndicatorsFromNodes(newValue);
-			revalidate();
+			// revalidate();
 		},
 		get edges() {
 			return edges;
 		},
 		set edges(v: Edge[]) {
 			edges = v;
-			revalidate();
+			// revalidate();
 		},
 		get indicatorsToPlot() {
 			return prevIndicators;

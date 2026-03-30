@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createIndicator, type IndicatorName } from '$lib/models/indicator';
 	import type { ConditionNodeData } from '$lib/types/nodes';
 	import type { Node, NodeProps } from '@xyflow/svelte';
 	import { Handle, Position, useSvelteFlow } from '@xyflow/svelte';
