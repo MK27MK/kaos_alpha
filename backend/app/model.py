@@ -12,6 +12,11 @@ class CamelCaseModel(BaseModel):
     )
 
 
+class AddIndicatorRequest(CamelCaseModel):
+    name: str
+    parameters: dict[str, int | float]
+
+
 class AddIndicatorResponse(CamelCaseModel):
     indicator_key: str
 

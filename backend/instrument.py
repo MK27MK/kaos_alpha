@@ -3,7 +3,7 @@ from abc import abstractmethod
 
 import numpy as np
 
-from indicators import Indicator
+from indicator import Indicator
 
 
 # NOTE do I need to add memory to them?

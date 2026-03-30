@@ -9,7 +9,7 @@ import time
 from collections import deque
 
 import numpy as np
-from indicators import BollingerBands
+from indicator import BollingerBands
 
 # ── Feature computation ──────────────────────────────────────────────
 

@@ -1,15 +1,14 @@
 import asyncio
 import time
 
-import numpy as np
-from backtest import Backtester
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from indicators import Indicator
-from processes import NoisySin
 
-from app.model import AddIndicatorResponse
+from app.model import AddIndicatorRequest, AddIndicatorResponse
+from backtest import Backtester
+from indicator import SMA, BollingerBands, Hour, Price
+from instrument import NoisySin
 
 app = FastAPI()
 
@@ -34,9 +33,17 @@ def health():
 
 
 @app.post("/api/indicators", response_model=AddIndicatorResponse)
-def add_indicator(indicator: Indicator):
-    instrument.add_indicator(indicator)
-    return AddIndicatorResponse(indicator_key=indicator.key)
+def add_indicator(request: AddIndicatorRequest):
+    indicator_class_map = {
+        "bollinger_bands": BollingerBands,
+        "sma": SMA,
+        "price": Price,
+        "hour": Hour,
+    }
+    child_class = indicator_class_map[request.name]
+    indicator_instance = child_class(arguments=request.parameters)
+    instrument.add_indicator(indicator_instance)
+    return AddIndicatorResponse(indicator_key=indicator_instance.key)
 
 
 @app.get(
@@ -44,13 +51,11 @@ def add_indicator(indicator: Indicator):
     response_model=dict[str, list[float | None]],
 )
 def get_indicator_history(indicator_key: str):
-    if indicator_key is None:
+    indicator = instrument.get_indicator(indicator_key)
+    if indicator is None:
         return JSONResponse({"error": "Indicator not found"}, status_code=404)
 
-    history = instrument.get_indicator(indicator_key).history
-
-    # Replace NaN with None so it serializes to JSON null
-    return history.replace({np.nan: None}).to_dict(orient="list")
+    return indicator.history
 
 
 @app.delete("/api/indicators/{indicator_key}")

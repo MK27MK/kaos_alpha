@@ -4,7 +4,7 @@ import type { LineData } from 'lightweight-charts';
  * @example { bblow: [], bbhigh: []}
  */
 export type IndicatorValues = Record<string, LineData[]>;
-
+// TODO merge these two types
 export type IndicatorValue = Record<string, LineData>;
 
 export type IndicatorName = 'price' | 'sma' | 'bollinger_bands' | 'hour';
@@ -47,8 +47,19 @@ export const INDICATOR_DISPLAY_NAMES: { value: IndicatorName; displayName: strin
 export const INDICATOR_PARAMETERS: Record<IndicatorName, IndicatorParameter[]> = {
 	price: [
 		{
-			name: 'barsAgo',
-			displayName: 'Bars Ago',
+			name: 'shift',
+			displayName: 'shift',
+			htmlTag: 'input',
+			plotParam: false,
+			min: 0,
+			max: 100,
+			default: 0
+		}
+	],
+	hour: [
+		{
+			name: 'shift',
+			displayName: 'shift',
 			htmlTag: 'input',
 			plotParam: false,
 			min: 0,
@@ -94,8 +105,7 @@ export const INDICATOR_PARAMETERS: Record<IndicatorName, IndicatorParameter[]> =
 			max: 5,
 			default: 2
 		}
-	],
-	hour: []
+	]
 };
 // ── Helpers ─────────────────────────────────────────────────────────
 
