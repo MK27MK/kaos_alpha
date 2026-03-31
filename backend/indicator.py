@@ -11,7 +11,7 @@ from pydantic import BaseModel, PrivateAttr
 class Indicator(BaseModel, ABC):
     name: str
     parameters: IndicatorParameters
-    history: dict[str, list[float]] = {}
+    history: dict[str, list[float | None]] = {}
     _buffer: deque = PrivateAttr(default_factory=deque)
 
     @property
@@ -33,7 +33,7 @@ class Indicator(BaseModel, ABC):
             return None
         return {k: v[-1] for k, v in self.history.items()}
 
-    def _append_new_value(self, new_value: dict[str, float]):
+    def _append_new_value(self, new_value: dict[str, float | None]):
         for key in new_value:
             self.history[key].append(new_value[key])
 
@@ -135,10 +135,10 @@ class BollingerBands(Indicator):
         std_dev = self.parameters["std_dev"]
 
         if len(self._buffer) < length:
-            new_value = {
-                "upper": [None],
-                "middle": [None],
-                "lower": [None],
+            new_value: dict[str, float | None] = {
+                "upper": None,
+                "middle": None,
+                "lower": None,
             }
 
         else:

@@ -1,41 +1,49 @@
 import math  # math.sin is faster than numpy sin on scalars
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from collections import deque
+from typing import NamedTuple
 
 import numpy as np
-
 from indicator import Indicator
 
 
-# NOTE do I need to add memory to them?
-class SyntheticInstrument:
+class PricePoint(NamedTuple):
+    price: float
+    time: int
+
+
+class SyntheticInstrument(ABC):
     def __init__(self, initial_price: float):
-        # TODO cap to 500-1000 values for performance reasons
-        # NOTE make it np.array and remove conversion from Indicator.calculate_history?
-        self._price_history: list[float] = [initial_price]
-        self._initial_price: float = initial_price
-        self._current_price: float = initial_price
+        self._initial_point = PricePoint(initial_price, 1)
+        self._current_point = self._initial_point
+
+        self._price_points = deque([self._initial_point], 1000)
         self._indicators: dict[str, Indicator] = {}
 
     @property
     def index(self) -> int:  # where we are in the time/x axis
-        return len(self._price_history) - 1
+        return len(self._price_points) - 1
 
-    @abstractmethod
-    def _calculate_price(self) -> None:
-        pass
+    @property
+    def indicators(self):
+        return self._indicators
 
-    @abstractmethod
-    def _calculate_prices(self, n: int) -> np.ndarray:
-        """Generate an array of n prices (vectorized, for backtesting)."""
-        pass
+    def get_new_point(self) -> PricePoint:
+        self._make_new_point()
+        self._update_price_points()
+        self._update_indicators()
 
-    def get_params(self) -> dict:
+        return self._current_point
+
+    def to_dict(self) -> dict:
         """Return constructor params so a fresh copy can be spawned for backtesting."""
-        return {"initial_price": self._initial_price}
+        return {"initial_price": self._initial_point.price}
+
+    # indicator methods ------------------------------------------------
 
     def add_indicator(self, indicator: Indicator) -> None:
         # Deduplication is handled by the frontend — if we get here, it's a new indicator
-        indicator.calculate_history(self._price_history)
+        indicator.calculate_history([p.price for p in self._price_points])
         self._indicators[indicator.key] = indicator
 
     def remove_indicator(self, key: str) -> None:
@@ -44,27 +52,35 @@ class SyntheticInstrument:
     def get_indicator(self, key: str) -> Indicator | None:
         return self._indicators.get(key)
 
-    @property
-    def indicators(self):
-        return self._indicators
-
-    def get_new_price(self) -> float:
-        self._calculate_price()
-        self._update_history()
-
-        # Update all indicators with the new price
-        for indicator in self._indicators.values():
-            indicator.update(self._current_price)
-
-        return self._current_price
-
-    def reset_history(self):
-        self._price_history: list[float] = [self._initial_price]
-        self._current_price = self._initial_price
+    def reset_price_points(self) -> None:
+        self._price_points = deque([self._initial_point], 1000)
+        self._current_point = self._initial_point
         self._indicators.clear()
 
-    def _update_history(self) -> None:
-        self._price_history.append(self._current_price)
+    # helpers ----------------------------------------------------------
+
+    def _update_price_points(self) -> None:
+        self._price_points.append(self._current_point)
+
+    def _update_indicators(self) -> None:
+        # Update all indicators with the new price
+        for indicator in self._indicators.values():
+            indicator.update(self._current_point.price)
+
+    def _get_new_time(self) -> int:
+        return self._current_point.time + 1
+
+    def _make_new_point(self) -> None:
+        self._current_point = PricePoint(self._get_new_price(), self._get_new_time())
+
+    @abstractmethod
+    def _get_new_price(self) -> float:
+        pass
+
+    @abstractmethod
+    def _get_new_prices(self, n: int) -> np.ndarray:
+        """Generate an array of n prices (vectorized, for backtesting)."""
+        pass
 
 
 class NoisySin(SyntheticInstrument):
@@ -80,26 +96,26 @@ class NoisySin(SyntheticInstrument):
         self._period = period
         self._noise_std = noise_std
 
-    def get_params(self) -> dict:
+    def to_dict(self) -> dict:
         return {
-            **super().get_params(),
+            **super().to_dict(),
             "amplitude": self._amplitude,
             "period": self._period,
             "noise_std": self._noise_std,
         }
 
-    def _calculate_price(self) -> None:
+    def _get_new_price(self) -> float:
         sin_component = self._amplitude * math.sin(
             2 * math.pi * self.index / self._period
         )
         noise = np.random.normal(0, self._noise_std)
-        self._current_price = self._initial_price + sin_component + noise
+        return self._initial_point.price + sin_component + noise
 
-    def _calculate_prices(self, n: int) -> np.ndarray:
+    def _get_new_prices(self, n: int) -> np.ndarray:
         indices = np.arange(n)
         sin_component = self._amplitude * np.sin(2 * np.pi * indices / self._period)
         noise = np.random.normal(0, self._noise_std, size=n)
-        return self._initial_price + sin_component + noise
+        return self._initial_point.price + sin_component + noise
 
 
 # NOTE difference between arithmetic and geom. GBM?

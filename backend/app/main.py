@@ -1,15 +1,15 @@
 import asyncio
 import time
 
+from backtest import Backtester
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-from app.data_model.model import AddIndicatorRequest, AddIndicatorResponse
-from backtest import Backtester
 from indicator import SMA, BollingerBands, Hour, Price
-from app.data_model.indicator_schema import INDICATOR_SCHEMAS, IndicatorSchema
 from instrument import NoisySin
+
+from app.data_model.indicator_schema import INDICATOR_SCHEMAS, IndicatorSchema
+from app.data_model.model import AddIndicatorRequest, AddIndicatorResponse
 
 app = FastAPI()
 
@@ -79,7 +79,7 @@ def run_backtest(strategy: dict):
 
     backtester = Backtester(
         instrument_class=instrument.__class__,
-        instrument_params=instrument.get_params(),
+        instrument_params=instrument.to_dict(),
     )
     return backtester.run(strategy)
 
@@ -96,8 +96,6 @@ async def price_stream(ws: WebSocket):
     base_interval = 0.5
     speed = 1.0
     paused = False
-    sim_time = int(time.time())
-    sim_time_start = sim_time
 
     try:
         while True:
@@ -123,12 +121,11 @@ async def price_stream(ws: WebSocket):
                 await asyncio.sleep(0.05)
                 continue
 
-            price = instrument.get_new_price()
+            new_point = instrument.get_new_point()
             await ws.send_json(
                 {
                     "type": "price",
-                    "time": sim_time,
-                    "value": round(price, 2),
+                    "value": new_point,
                 }
             )
 
@@ -144,7 +141,7 @@ async def price_stream(ws: WebSocket):
                         {
                             "type": "indicator",
                             "key": indicator.key,
-                            "time": sim_time,
+                            "time": new_point.time,
                             "value": val,
                         }
                     )
@@ -153,12 +150,11 @@ async def price_stream(ws: WebSocket):
                         {
                             "type": "indicator",
                             "key": indicator.key,
-                            "time": sim_time,
+                            "time": new_point.time,
                             "value": round(float(val), 4),
                         }
                     )
 
-            sim_time += 60
             await asyncio.sleep(base_interval / speed)
     except WebSocketDisconnect:
         pass
