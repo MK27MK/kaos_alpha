@@ -5,10 +5,9 @@ from backtest import Backtester
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from indicator import SMA, BollingerBands, Hour, Price
+from indicator import SMA, BollingerBands
 from instrument import NoisySin
 
-from app.data_model.indicator_schema import INDICATOR_SCHEMAS, IndicatorSchema
 from app.data_model.model import AddIndicatorRequest, AddIndicatorResponse
 
 app = FastAPI()
@@ -30,14 +29,6 @@ def health():
     return {"status": "ok"}
 
 
-# REST endpoints for indicator schemas ==================================
-
-
-@app.get("/api/indicator-schemas", response_model=list[IndicatorSchema])
-def get_indicator_schemas():
-    return list(INDICATOR_SCHEMAS.values())
-
-
 # REST endpoints for indicator management ==============================
 
 
@@ -46,11 +37,11 @@ def add_indicator(request: AddIndicatorRequest):
     indicator_class_map = {
         "bollinger_bands": BollingerBands,
         "sma": SMA,
-        "price": Price,
-        "hour": Hour,
+        # "price": Price,
+        # "hour": Hour,
     }
     child_class = indicator_class_map[request.name]
-    indicator_instance = child_class(arguments=request.parameters)
+    indicator_instance = child_class(parameters=request.parameters)
     instrument.add_indicator(indicator_instance)
     return AddIndicatorResponse(indicator_key=indicator_instance.key)
 

@@ -13,11 +13,12 @@ class PricePoint(NamedTuple):
 
 
 class SyntheticInstrument(ABC):
-    def __init__(self, initial_price: float):
+    def __init__(self, initial_price: float, max_len: int):
+        self._max_len = max_len
         self._initial_point = PricePoint(initial_price, 1)
         self._current_point = self._initial_point
 
-        self._price_points = deque([self._initial_point], 1000)
+        self._price_points = deque([self._initial_point], max_len)
         self._indicators: dict[str, Indicator] = {}
 
     @property
@@ -34,6 +35,13 @@ class SyntheticInstrument(ABC):
         self._update_indicators()
 
         return self._current_point
+
+    def get_new_points(self, n_of_points: int) -> list[PricePoint]:
+        return [self.get_new_point() for _ in range(n_of_points)]
+
+    def get_historical_point(self, bars_ago: int = 0) -> PricePoint:
+        # -1 -> last bar (0 bars_ago), -2 -> 1 bar ago ...
+        return self._price_points[-(1 + bars_ago)]
 
     def to_dict(self) -> dict:
         """Return constructor params so a fresh copy can be spawned for backtesting."""
@@ -75,6 +83,13 @@ class SyntheticInstrument(ABC):
 
     @abstractmethod
     def _get_new_price(self) -> float:
+        """Contains the logic which generates a new price.
+
+        Returns
+        -------
+        float
+            Price generated.
+        """
         pass
 
     @abstractmethod

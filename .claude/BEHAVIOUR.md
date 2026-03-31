@@ -16,6 +16,7 @@ quando aggiungi un nodo condizione al flow:
 - il livello specifico usato dalla regola magari ha anche un tag tipo #12 (tag del nodo), che se clickato mette il nodo in focus nel flow chart.
 
 nodo entry/exit:
+MASSIMO 1 per ogni tipo, quindi, 1 entry long, 1 exit long, 1 exit short, 1 exit long.
 
 - spunta puntino nel punto in cui si entrerebbe (rosso short, verde long)
   - se il nodo non ha una exit corrispondente, mostra tutti gli ipotetici puntini di entrata

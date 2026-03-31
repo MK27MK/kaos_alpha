@@ -5,21 +5,25 @@ evaluates conditions and propagates signals through the graph, then
 simulates positions bar-by-bar.
 """
 
+from dataclasses import dataclass
 import time
 from collections import deque
 
 import numpy as np
-from indicator import BollingerBands
-from app.data_model.indicator_schema import make_indicator_key
+from app.data_model.indicator_schema import IndicatorKey
+from indicator import BollingerBands, Indicator
+from instrument import SyntheticInstrument
 
-# ── Feature computation ──────────────────────────────────────────────
+def make_indicator_key(indicator_name: str, parameters: dict[str, Any]) -> str:
+    """Generate a deterministic deduplication key using only plot_param parameters.
 
-
-def _feature_key(market_feature: dict) -> str:
-    """Deterministic cache key using the centralized key algorithm."""
-    return make_indicator_key(
-        market_feature["name"], market_feature.get("parameters", {})
-    )
+    This is the single key-generation algorithm used across the entire codebase:
+    indicator.key, backtest feature cache, and frontend deduplication.
+    """
+    schema = INDICATOR_SCHEMAS[indicator_name]
+    plot_values = [str(parameters[p.name]) for p in schema.parameters if p.plot_param]
+    suffix = ":".join(plot_values)
+    return f"{indicator_name}:{suffix}" if suffix else indicator_name
 
 
 def _compute_feature(
@@ -78,11 +82,20 @@ _OPERATORS = {
     "=": lambda a, b: np.isclose(a, b, atol=1e-9),
 }
 
+@dataclass
+class Condition:
+    left: Indicator
+    operator: str
+    right: Indicator
 
-def _evaluate_condition(cond: dict, feature_cache: dict[str, np.ndarray]) -> np.ndarray:
-    left = feature_cache[_feature_key(cond["left"])]
-    right = feature_cache[_feature_key(cond["right"])]
-    op_fn = _OPERATORS[cond["operator"]]
+@dataclass
+class Strategy:
+    conditions: list[Condition]
+
+def _evaluate_condition(condition: Condition, feature_cache: dict[str, np.ndarray]) -> np.ndarray:
+    left = feature_cache[_feature_key(condition["left"])]
+    right = feature_cache[_feature_key(condition["right"])]
+    op_fn = _OPERATORS[condition["operator"]]
     # NaN comparisons naturally yield False — warmup bars won't fire
     result = op_fn(left, right)
     # Force any NaN-originating values to False
@@ -247,27 +260,22 @@ def _simulate_positions(
 
 
 class Backtester:
-    def __init__(self, instrument_class, instrument_params: dict, n_bars: int = 10_000):
-        self._instrument_class = instrument_class
-        self._instrument_params = instrument_params
+    def __init__(self, instrument: SyntheticInstrument, n_bars: int = 10_000):
+        self._instrument = instrument
         self._n_bars = n_bars
 
-    def run(self, strategy: dict) -> dict:
+    def run(self, strategy: Strategy) -> dict:
         # Phase 0: generate fresh price data
-        instrument = self._instrument_class(**self._instrument_params)
-        prices = instrument._calculate_prices(self._n_bars)
-        base_time = int(time.time())
-        times = np.arange(self._n_bars) * 60 + base_time
-
         n_bars = self._n_bars
+        price_points = self._instrument.get_new_points(n_bars)
 
         # Phase 1: compute feature arrays (deduplicated)
-        feature_cache: dict[str, np.ndarray] = {}
-        for cond in strategy["conditions"].values():
-            for side in ("left", "right"):
-                key = _feature_key(cond[side])
-                if key not in feature_cache:
-                    feature_cache[key] = _compute_feature(cond[side], prices, times)
+        feature_cache: dict[IndicatorKey, np.ndarray] = {}
+        for cond in strategy.conditions:
+            key_l, key_r = _feature_key(cond.left), _feature_key(cond.right)
+                # necessary
+                if key not in feature_cache: 
+                    feature_cache[key] = _compute_feature(cond[side], price_points, times)
 
         # Phase 2: evaluate each condition to a bool array
         condition_results: dict[str, np.ndarray] = {}
@@ -279,7 +287,7 @@ class Backtester:
 
         # Phase 4: simulate positions
         trades, equity = _simulate_positions(
-            signals, strategy["actions"], prices, n_bars
+            signals, strategy["actions"], price_points, n_bars
         )
 
         # Build response

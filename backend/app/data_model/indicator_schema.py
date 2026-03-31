@@ -5,11 +5,11 @@ constraints, defaults, UI hints, and key generation.
 The frontend fetches these via GET /api/indicator-schemas.
 """
 
-from typing import Any, Literal
+from typing import Literal
 
 from app.data_model.camel_case_model import CamelCaseModel
 
-type IndicatorParameters = dict[str, int | float | str]
+type IndicatorKey = str
 
 
 class OptionSchema(CamelCaseModel):
@@ -118,15 +118,3 @@ INDICATOR_SCHEMAS: dict[str, IndicatorSchema] = {
         ],
     ),
 }
-
-
-def make_indicator_key(indicator_name: str, parameters: dict[str, Any]) -> str:
-    """Generate a deterministic deduplication key using only plot_param parameters.
-
-    This is the single key-generation algorithm used across the entire codebase:
-    indicator.key, backtest feature cache, and frontend deduplication.
-    """
-    schema = INDICATOR_SCHEMAS[indicator_name]
-    plot_values = [str(parameters[p.name]) for p in schema.parameters if p.plot_param]
-    suffix = ":".join(plot_values)
-    return f"{indicator_name}:{suffix}" if suffix else indicator_name

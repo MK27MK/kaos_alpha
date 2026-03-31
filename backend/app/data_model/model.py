@@ -1,5 +1,6 @@
 from app.data_model.camel_case_model import CamelCaseModel
-from app.data_model.indicator_schema import IndicatorParameters
+
+type IndicatorParameters = dict[str, int | float | str]
 
 
 class AddIndicatorRequest(CamelCaseModel):
