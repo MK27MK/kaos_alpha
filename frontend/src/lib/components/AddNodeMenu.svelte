@@ -2,10 +2,10 @@
 	import { useSvelteFlow } from '@xyflow/svelte';
 
 	interface AddNodeMenuProps {
-		onAddNode: (type: string, position: { x: number; y: number }) => void;
+		onaddnode: (type: string, position: { x: number; y: number }) => void;
 	}
 
-	let { onAddNode }: AddNodeMenuProps = $props();
+	let { onaddnode }: AddNodeMenuProps = $props();
 
 	let expanded = $state(false);
 
@@ -32,7 +32,7 @@
 	}
 
 	function handleItemClick(type: string) {
-		onAddNode(type, getFlowCenter());
+		onaddnode(type, getFlowCenter());
 		expanded = false;
 	}
 </script>

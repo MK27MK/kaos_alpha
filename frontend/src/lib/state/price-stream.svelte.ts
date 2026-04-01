@@ -1,4 +1,4 @@
-import type { SyntheticInstrument } from '$lib/models/market-data.svelte';
+import type { SyntheticInstrument } from '$lib/state/instrument.svelte';
 import { WS_BASE_URL } from '$lib/utils/env';
 import type { LineData, UTCTimestamp } from 'lightweight-charts';
 

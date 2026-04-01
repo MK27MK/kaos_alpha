@@ -5,25 +5,12 @@ evaluates conditions and propagates signals through the graph, then
 simulates positions bar-by-bar.
 """
 
-from dataclasses import dataclass
-import time
 from collections import deque
+from dataclasses import dataclass
 
 import numpy as np
-from app.data_model.indicator_schema import IndicatorKey
 from indicator import BollingerBands, Indicator
 from instrument import SyntheticInstrument
-
-def make_indicator_key(indicator_name: str, parameters: dict[str, Any]) -> str:
-    """Generate a deterministic deduplication key using only plot_param parameters.
-
-    This is the single key-generation algorithm used across the entire codebase:
-    indicator.key, backtest feature cache, and frontend deduplication.
-    """
-    schema = INDICATOR_SCHEMAS[indicator_name]
-    plot_values = [str(parameters[p.name]) for p in schema.parameters if p.plot_param]
-    suffix = ":".join(plot_values)
-    return f"{indicator_name}:{suffix}" if suffix else indicator_name
 
 
 def _compute_feature(
@@ -82,25 +69,30 @@ _OPERATORS = {
     "=": lambda a, b: np.isclose(a, b, atol=1e-9),
 }
 
+
 @dataclass
 class Condition:
     left: Indicator
     operator: str
     right: Indicator
 
+
 @dataclass
 class Strategy:
     conditions: list[Condition]
 
-def _evaluate_condition(condition: Condition, feature_cache: dict[str, np.ndarray]) -> np.ndarray:
-    left = feature_cache[_feature_key(condition["left"])]
-    right = feature_cache[_feature_key(condition["right"])]
-    op_fn = _OPERATORS[condition["operator"]]
-    # NaN comparisons naturally yield False — warmup bars won't fire
-    result = op_fn(left, right)
-    # Force any NaN-originating values to False
-    result[np.isnan(left) | np.isnan(right)] = False
-    return result
+
+# def _evaluate_condition(
+#     condition: Condition, feature_cache: dict[str, np.ndarray]
+# ) -> np.ndarray:
+#     left = feature_cache[_feature_key(condition["left"])]
+#     right = feature_cache[_feature_key(condition["right"])]
+#     op_fn = _OPERATORS[condition["operator"]]
+#     # NaN comparisons naturally yield False — warmup bars won't fire
+#     result = op_fn(left, right)
+#     # Force any NaN-originating values to False
+#     result[np.isnan(left) | np.isnan(right)] = False
+#     return result
 
 
 # ── DAG signal propagation ───────────────────────────────────────────
@@ -264,85 +256,86 @@ class Backtester:
         self._instrument = instrument
         self._n_bars = n_bars
 
-    def run(self, strategy: Strategy) -> dict:
-        # Phase 0: generate fresh price data
-        n_bars = self._n_bars
-        price_points = self._instrument.get_new_points(n_bars)
+    # def run(self, strategy: Strategy) -> dict:
+    #     # Phase 0: generate fresh price data
+    #     n_bars = self._n_bars
+    #     price_points = self._instrument.get_new_points(n_bars)
 
-        # Phase 1: compute feature arrays (deduplicated)
-        feature_cache: dict[IndicatorKey, np.ndarray] = {}
-        for cond in strategy.conditions:
-            key_l, key_r = _feature_key(cond.left), _feature_key(cond.right)
-                # necessary
-                if key not in feature_cache: 
-                    feature_cache[key] = _compute_feature(cond[side], price_points, times)
+    #     # Phase 1: compute feature arrays (deduplicated)
+    #     feature_cache: dict[IndicatorKey, np.ndarray] = {}
+    #     for cond in strategy.conditions:
+    #         key_l, key_r = _feature_key(cond.left), _feature_key(cond.right)
+    #             # necessary
+    #             if key not in feature_cache:
+    #                 feature_cache[key] = _compute_feature(cond[side], price_points, times)
 
-        # Phase 2: evaluate each condition to a bool array
-        condition_results: dict[str, np.ndarray] = {}
-        for node_id, cond in strategy["conditions"].items():
-            condition_results[node_id] = _evaluate_condition(cond, feature_cache)
+    #     # Phase 2: evaluate each condition to a bool array
+    #     condition_results: dict[str, np.ndarray] = {}
+    #     for node_id, cond in strategy["conditions"].items():
+    #         condition_results[node_id] = _evaluate_condition(cond, feature_cache)
 
-        # Phase 3: propagate signals through the DAG
-        signals = _compute_signals(strategy, condition_results, n_bars)
+    #     # Phase 3: propagate signals through the DAG
+    #     signals = _compute_signals(strategy, condition_results, n_bars)
 
-        # Phase 4: simulate positions
-        trades, equity = _simulate_positions(
-            signals, strategy["actions"], price_points, n_bars
-        )
+    #     # Phase 4: simulate positions
+    #     trades, equity = _simulate_positions(
+    #         signals, strategy["actions"], price_points, n_bars
+    #     )
 
-        # Build response
-        entry_markers = []
-        exit_markers = []
-        for trade in trades:
-            entry_markers.append(
-                {
-                    "time": int(times[trade["entry_bar"]]),
-                    "direction": trade["direction"],
-                }
-            )
-            if trade["exit_bar"] >= 0:
-                exit_markers.append(
-                    {
-                        "time": int(times[trade["exit_bar"]]),
-                        "direction": trade["direction"],
-                    }
-                )
+    #     # Build response
+    #     entry_markers = []
+    #     exit_markers = []
+    #     for trade in trades:
+    #         entry_markers.append(
+    #             {
+    #                 "time": int(times[trade["entry_bar"]]),
+    #                 "direction": trade["direction"],
+    #             }
+    #         )
+    #         if trade["exit_bar"] >= 0:
+    #             exit_markers.append(
+    #                 {
+    #                     "time": int(times[trade["exit_bar"]]),
+    #                     "direction": trade["direction"],
+    #                 }
+    #             )
 
-        equity_curve = [
-            {"time": int(times[i]), "value": round(equity[i], 4)} for i in range(n_bars)
-        ]
+    #     equity_curve = [
+    #         {"time": int(times[i]), "value": round(equity[i], 4)} for i in range(n_bars)
+    #     ]
 
-        # Summary stats
-        total_trades = len(trades)
-        winning = [t for t in trades if t["pnl"] > 0]
-        losing = [t for t in trades if t["pnl"] <= 0]
-        total_pnl = sum(t["pnl"] for t in trades)
+    #     # Summary stats
+    #     total_trades = len(trades)
+    #     winning = [t for t in trades if t["pnl"] > 0]
+    #     losing = [t for t in trades if t["pnl"] <= 0]
+    #     total_pnl = sum(t["pnl"] for t in trades)
 
-        # Max drawdown from equity curve
-        peak = -np.inf
-        max_dd = 0.0
-        for val in equity:
-            if val > peak:
-                peak = val
-            dd = val - peak
-            if dd < max_dd:
-                max_dd = dd
+    #     # Max drawdown from equity curve
+    #     peak = -np.inf
+    #     max_dd = 0.0
+    #     for val in equity:
+    #         if val > peak:
+    #             peak = val
+    #         dd = val - peak
+    #         if dd < max_dd:
+    #             max_dd = dd
 
-        summary = {
-            "total_trades": total_trades,
-            "winning_trades": len(winning),
-            "losing_trades": len(losing),
-            "total_pnl": round(total_pnl, 4),
-            "max_drawdown": round(max_dd, 4),
-            "win_rate": (
-                round(len(winning) / total_trades, 4) if total_trades > 0 else 0
-            ),
-        }
+    #     summary = {
+    #         "total_trades": total_trades,
+    #         "winning_trades": len(winning),
+    #         "losing_trades": len(losing),
+    #         "total_pnl": round(total_pnl, 4),
+    #         "max_drawdown": round(max_dd, 4),
+    #         "win_rate": (
+    #             round(len(winning) / total_trades, 4) if total_trades > 0 else 0
+    #         ),
+    #     }
 
-        return {
-            "trades": trades,
-            "equity_curve": equity_curve,
-            "entry_markers": entry_markers,
-            "exit_markers": exit_markers,
-            "summary": summary,
-        }
+    #     return {
+    #         "trades": trades,
+    #         "equity_curve": equity_curve,
+    #         "entry_markers": entry_markers,
+    #         "exit_markers": exit_markers,
+    #         "summary": summary,
+    #     }
+    #     }

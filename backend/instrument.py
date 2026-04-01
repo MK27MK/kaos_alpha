@@ -1,4 +1,5 @@
 import math  # math.sin is faster than numpy sin on scalars
+import time as _time
 from abc import ABC, abstractmethod
 from collections import deque
 from typing import NamedTuple
@@ -9,13 +10,13 @@ from indicator import Indicator
 
 class PricePoint(NamedTuple):
     price: float
-    time: int
+    time: int  # Unix timestamp in seconds
 
 
 class SyntheticInstrument(ABC):
-    def __init__(self, initial_price: float, max_len: int):
+    def __init__(self, initial_price: float, max_len: int = 1000):
         self._max_len = max_len
-        self._initial_point = PricePoint(initial_price, 1)
+        self._initial_point = PricePoint(initial_price, int(_time.time()))
         self._current_point = self._initial_point
 
         self._price_points = deque([self._initial_point], max_len)
@@ -61,6 +62,7 @@ class SyntheticInstrument(ABC):
         return self._indicators.get(key)
 
     def reset_price_points(self) -> None:
+        self._initial_point = PricePoint(self._initial_point.price, int(_time.time()))
         self._price_points = deque([self._initial_point], 1000)
         self._current_point = self._initial_point
         self._indicators.clear()
@@ -76,7 +78,8 @@ class SyntheticInstrument(ABC):
             indicator.update(self._current_point.price)
 
     def _get_new_time(self) -> int:
-        return self._current_point.time + 1
+        # Each tick advances by 1 minute - lightweight-charts expects Unix timestamps
+        return self._current_point.time + 60
 
     def _make_new_point(self) -> None:
         self._current_point = PricePoint(self._get_new_price(), self._get_new_time())

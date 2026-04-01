@@ -1,6 +1,20 @@
-import { createIndicator, type ComparisonOperator, type Indicator } from '$lib/models/indicator';
+import { createIndicator, type Indicator } from '$lib/models/indicator';
+import type { NodeTypes } from '@xyflow/svelte';
+import ConditionNode from './ConditionNode/ConditionNode.svelte';
+import EntryNode from './EntryNode.svelte';
+import ExitNode from './ExitNode.svelte';
 
-// ── Node data interfaces ────────────────────────────────────────────
+export const NODE_LIMIT = 50;
+
+export const nodeTypes: NodeTypes = {
+	condition: ConditionNode,
+	entry: EntryNode,
+	exit: ExitNode
+};
+
+// ============================================================================
+// NodeData interfaces
+// ============================================================================
 
 export interface ConditionNodeData {
 	label: string;
@@ -19,8 +33,6 @@ export interface ExitNodeData {
 	direction: 'buy' | 'sell';
 }
 
-export const NODE_LIMIT = 50;
-
 export function getDefaultNodeData(type: string, label: string): Record<string, unknown> {
 	switch (type) {
 		case 'condition':
@@ -38,3 +50,4 @@ export function getDefaultNodeData(type: string, label: string): Record<string, 
 			return { label };
 	}
 }
+export type ComparisonOperator = '<' | '>' | '=' | '<=' | '>=' | '!=';

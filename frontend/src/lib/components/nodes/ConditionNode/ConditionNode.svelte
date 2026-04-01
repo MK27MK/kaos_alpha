@@ -1,42 +1,46 @@
 <script lang="ts">
-	import type { ConditionNodeData } from '$lib/types/nodes';
-	import type { Node, NodeProps } from '@xyflow/svelte';
-	import { Handle, Position, useSvelteFlow } from '@xyflow/svelte';
-	import IndicatorInput from './IndicatorInput.svelte';
+		import type { Node, NodeProps } from '@xyflow/svelte';
+		import { Handle, Position, useSvelteFlow } from '@xyflow/svelte';
+		import type { ConditionNodeData } from '../nodes';
+		import IndicatorInput from './IndicatorInput.svelte';
 
 	type ConditionNode = Node<ConditionNodeData, 'condition'>;
 
-	let { id, data }: NodeProps<ConditionNode> = $props();
+	let { id, nodeData }: NodeProps<ConditionNode> = $props();
 
 	const { updateNodeData } = useSvelteFlow();
 
 	const operators = ['<', '>', '=', '<=', '>=', '!='];
 </script>
 
+<!-- ====================================================================== -->
+
 <Handle type="target" position={Position.Top} />
 
 <div class="node-header">
 	<span class="icon">&#9670;</span>
-	<span>{data.label}</span>
+	<span>{nodeData.label}</span>
 </div>
 
 <div class="selects-row">
-	<IndicatorInput {id} {data} side="leftIndicator" />
+	<IndicatorInput {id} {nodeData} side="leftIndicator" />
 	<!-- Operator -->
 	<select
 		class="nodrag"
-		value={data.operator}
+		value={nodeData.operator}
 		onchange={(e) => updateNodeData(id, { operator: e.currentTarget.value })}
 	>
 		{#each operators as op (op)}
 			<option value={op}>{op}</option>
 		{/each}
 	</select>
-	<IndicatorInput {id} {data} side="rightIndicator" />
+	<IndicatorInput {id} {nodeData} side="rightIndicator" />
 </div>
 
 <Handle type="source" position={Position.Right} id="true" />
 <Handle type="source" position={Position.Left} id="false" />
+
+<!-- ====================================================================== -->
 
 <style>
 	:global(.svelte-flow__node-condition) {

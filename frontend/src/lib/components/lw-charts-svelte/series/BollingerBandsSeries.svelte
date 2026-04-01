@@ -1,9 +1,9 @@
 <script lang="ts">
+	import type { PricePoint } from '$lib/state/instrument.svelte';
+	import { indicatorSeriesDefaults } from '$lib/utils/chartConfig';
 	import { LineSeries, LineStyle, type ISeriesApi } from 'lightweight-charts';
 	import { onMount, untrack } from 'svelte';
 	import { useChart } from '../context.js';
-	import type { PricePoint } from '$lib/models/market-data.svelte';
-	import { indicatorSeriesDefaults } from '$lib/utils/chartConfig';
 
 	interface BollingerBandsSeriesProps {
 		data: PricePoint[][];

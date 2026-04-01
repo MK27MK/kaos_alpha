@@ -1,5 +1,9 @@
-import type { ComparisonOperator } from '$lib/models/indicator';
-import type { ConditionNodeData, EntryNodeData, ExitNodeData } from '$lib/types/nodes';
+import type {
+	ComparisonOperator,
+	ConditionNodeData,
+	EntryNodeData,
+	ExitNodeData
+} from '$lib/components/nodes/nodes';
 import type { Edge, Node } from '@xyflow/svelte';
 
 // ── Serialization types (what the backend receives) ──────────────────

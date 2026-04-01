@@ -1,14 +1,18 @@
 import asyncio
-import time
 
-from backtest import Backtester
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from indicator import SMA, BollingerBands
 from instrument import NoisySin
 
-from app.data_model.model import AddIndicatorRequest, AddIndicatorResponse
+from app.data_model.model import (
+    AddIndicatorRequest,
+    AddIndicatorResponse,
+    ControlMessage,
+    IndicatorMessage,
+    PriceMessage,
+)
 
 app = FastAPI()
 
@@ -19,9 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Module-level globals so REST endpoints can access the instrument state
+# Module-level global so REST endpoints can access the instrument state
 instrument = NoisySin()
-sim_time_start: int = 0
 
 
 @app.get("/health")
@@ -64,15 +67,15 @@ def delete_indicator(indicator_key: str):
     return {"status": "ok"}
 
 
-@app.post("/api/backtest")
-def run_backtest(strategy: dict):
-    """Run vectorized backtest on freshly generated data (independent of the live stream)."""
+# @app.post("/api/backtest")
+# def run_backtest(strategy: dict):
+#     """Run vectorized backtest on freshly generated data (independent of the live stream)."""
 
-    backtester = Backtester(
-        instrument_class=instrument.__class__,
-        instrument_params=instrument.to_dict(),
-    )
-    return backtester.run(strategy)
+#     backtester = Backtester(
+#         instrument_class=instrument.__class__,
+#         instrument_params=instrument.to_dict(),
+#     )
+#     return backtester.run(strategy)
 
 
 # WebSocket price stream ===============================================
@@ -80,7 +83,7 @@ def run_backtest(strategy: dict):
 
 @app.websocket("/ws/price-stream")
 async def price_stream(ws: WebSocket):
-    global instrument, sim_time_start
+    global instrument
     await ws.accept()
 
     instrument = NoisySin()
@@ -91,20 +94,18 @@ async def price_stream(ws: WebSocket):
     try:
         while True:
             try:
-                msg = await asyncio.wait_for(ws.receive_json(), timeout=0.01)
-                if msg.get("type") == "control":
-                    action = msg.get("action")
-                    if action == "pause":
+                raw_msg = await asyncio.wait_for(ws.receive_json(), timeout=0.01)
+                control = ControlMessage.model_validate(raw_msg)
+                match control.action:
+                    case "pause":
                         paused = True
-                    elif action == "resume":
+                    case "resume":
                         paused = False
-                    elif action == "reset":
+                    case "reset":
                         instrument = NoisySin()
-                        sim_time = int(time.time())
-                        sim_time_start = sim_time
                         paused = False
-                    elif action == "speed":
-                        speed = max(0.1, min(10.0, float(msg.get("value", 1.0))))
+                    case "speed":
+                        speed = max(0.1, min(10.0, control.value or 1.0))
             except asyncio.TimeoutError:
                 pass
 
@@ -113,12 +114,8 @@ async def price_stream(ws: WebSocket):
                 continue
 
             new_point = instrument.get_new_point()
-            await ws.send_json(
-                {
-                    "type": "price",
-                    "value": new_point,
-                }
-            )
+            price_msg = PriceMessage(time=new_point.time, value=new_point.price)
+            await ws.send_json(price_msg.model_dump())
 
             # Send indicator tick values
             for indicator in instrument.indicators.values():
@@ -126,25 +123,12 @@ async def price_stream(ws: WebSocket):
                 if val is None:
                     continue
 
-                if isinstance(val, dict):
-                    # Multi-band indicator (BB): send ONE message with all band values
-                    await ws.send_json(
-                        {
-                            "type": "indicator",
-                            "key": indicator.key,
-                            "time": new_point.time,
-                            "value": val,
-                        }
-                    )
-                else:
-                    await ws.send_json(
-                        {
-                            "type": "indicator",
-                            "key": indicator.key,
-                            "time": new_point.time,
-                            "value": round(float(val), 4),
-                        }
-                    )
+                indicator_msg = IndicatorMessage(
+                    key=indicator.key,
+                    time=new_point.time,
+                    value=val,
+                )
+                await ws.send_json(indicator_msg.model_dump())
 
             await asyncio.sleep(base_interval / speed)
     except WebSocketDisconnect:

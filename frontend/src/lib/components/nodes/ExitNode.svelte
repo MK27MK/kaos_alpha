@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { NodeProps, Node } from '@xyflow/svelte';
+	import type { Node, NodeProps } from '@xyflow/svelte';
 	import { Handle, Position, useSvelteFlow } from '@xyflow/svelte';
-	import type { ExitNodeData } from '$lib/types/nodes';
+	import type { ExitNodeData } from './nodes';
 
 	type ExitNode = Node<ExitNodeData, 'exit'>;
 
